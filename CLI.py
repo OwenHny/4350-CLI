@@ -1,11 +1,19 @@
 import random
 import requests
+import json
 
 CONNECTION_STRING = "http://localhost:5000"
 
 
+def input_float(request):
+    num = ""
+    while not num.isdigit():
+        num = input(request)
 
+    return float(num) 
 
+def input_int(request):
+    return int(input_float(request))
 
 class CourseMarks:
 
@@ -18,14 +26,15 @@ class CourseMarks:
         
         print("this mark has been created and has id: " + str(self.id))
 
+    # TODO
     def json_create(self):
-        print("TODO")
+        return {'lat': self.lat, 'lon': self.lon, 'description': self.descrip, 'rounding': self.rounding, 'isStart': self.isStart ,'gate':self.gate}
 
     def input_lat(self):
-        self.lat = input("Input Latitude: ")
+        self.lat = input_float("Input Latitude: ")
 
     def input_lon(self):
-        self.lon = input("Input longitude: ")
+        self.lon = input_float("Input longitude: ")
  
     def input_descrip(self):
         self.descrip = input("Input description: ")
@@ -70,11 +79,17 @@ class Course:
         self.create_new()
 
         self.id = requests.post(CONNECTION_STRING + "/Course", self.json_create())
+        print(self.id.json())
 
         print("this course has been created and has id: " + str(self.id))
 
+    # TODO
     def json_create(self):
-        print("TODO")
+        marks = []
+        for mark in self.marks:
+            marks.append(mark.json_create())
+        return {'name': self.name, 'description': self.description, 'marks': marks}
+        
 
     def create_new(self):
         for function in self.input_functions:
@@ -87,11 +102,8 @@ class Course:
         self.description = input("Input Description: ")
  
     def input_marks(self):
-        num_marks = ""
-        while not num_marks.isdigit():
-            num_marks = input("How many marks would you like to create?\n")
+        num_marks = input_int("How many marks would you like to create?\n")
 
-        num_marks = int(num_marks)
         self.marks = list()
         for i in range(num_marks):
             self.marks.append(CourseMarks(self.id))
@@ -102,15 +114,29 @@ class Race:
         self.input_functions = []
         self.create_new()
         
-        self.id = requests.post("/race", self.json_create()) 
+        self.id = requests.post(CONNECTION_STRING + "/race", self.json_create()) 
         
         print("this race has been created and has id: " + str(self.id))
+
+    def get():
+        responce = input("get specific race? Y/N \n")
+
+        if (responce == "y" or responce == "Y"):
+            id = input_int("Input race Id: ") 
+            print( requests.get(CONNECTION_STRING + "/race" + str(id)).json())
+        else:
+            print( requests.get(CONNECTION_STRING + "/race").json())
+
+    def get_results():
+        id = input_int("Input race Id: ") 
+        print(requests.get(CONNECTION_STRING + "/race/" + str(id) + "/results").json())
 
     def create_new(self):
         for function in self.input_functions:
             function()
 
 
+    # TODO
     def json_create(self):
         print("TODO")
 
@@ -128,7 +154,7 @@ class Race:
         responce = input("Is there a course already created that you would like to use for this race? Y/N \n")
 
         if (responce == "y" or responce == "Y"):
-            self.course_id = input("Input Course Id: ")
+            self.course_id = input_int("Input Course Id: ")
         else:
             self.course_id = Course()
 
@@ -137,10 +163,10 @@ class Race:
         responce = input("Would you like to attach this race to a regatta Y/N \n")
 
         if (responce == "y" or responce == "Y"):
-            self.course_id = input("Input Regatta Id: ")
+            self.course_id = input_int("Input Regatta Id: ")
 
-USER_ACTIONS = [Race, Course]
-USER_OPTIONS = ["Create a race", "Create a course"]
+USER_ACTIONS = [Race, Course, Race.get, Race.get_results]
+USER_OPTIONS = ["Create a race", "Create a course", "Get race data", "Get race results"]
 
 while True:
     print("actions avalible: ")
