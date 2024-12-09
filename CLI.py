@@ -103,10 +103,14 @@ class Course:
 
         if (responce == "y" or responce == "Y"):
             id = input_int("Input course id: ") 
-            print(yaml.dump( requests.get(CONNECTION_STRING + "/course" + str(id)).json(), default_flow_style=None))
+            responce = requests.get(CONNECTION_STRING + "/course/" + str(id)).json()
         else:
-            print(yaml.dump( requests.get(CONNECTION_STRING + "/course").json(), default_flow_style=None))
+             requests.get(CONNECTION_STRING + "/course").json()
 
+        if("status" in responce or "status_code" in responce):
+            print("there was an error in retiving that race")
+        else:
+            print(yaml.dump(responce, default_flow_style=False))
 
     def link_marks(self):
         for mark in self.marks:
@@ -162,11 +166,14 @@ class Race:
 
         if (responce == "y" or responce == "Y"):
             id = input_int("Input race Id: ") 
-            responce = requests.get(CONNECTION_STRING + "/race" + str(id)).json()
+            responce = requests.get(CONNECTION_STRING + "/race/" + str(id)).json()
         else:
             responce =  requests.get(CONNECTION_STRING + "/race").json()
 
-        print(yaml.dump(responce, default_flow_style=False))
+        if("status" in responce):
+            print("there was an error in retiving that race")
+        else:
+            print(yaml.dump(responce, default_flow_style=False))
 
     def get_results():
         id = input_int("Input race Id: ") 
