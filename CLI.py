@@ -1,8 +1,8 @@
 import random
 import requests
-import json
+import yaml
 
-CONNECTION_STRING = "http://localhost:5000"
+CONNECTION_STRING = "http://146.190.251.228:5000"
 
 
 def input_float(request):
@@ -22,13 +22,15 @@ class CourseMarks:
         self.input_functions = [self.input_lat, self.input_lon, self.input_descrip, self.input_isStart, self.input_rounding, self.input_gate]
         self.create_new()
         
-        self.id = random.randint(0, 999999999999)
+        self.id = random.randint(0, 999999)
         
         print("this mark has been created and has id: " + str(self.id))
 
-    # TODO
     def json_create(self):
-        return {'lat': self.lat, 'lon': self.lon, 'description': self.descrip, 'rounding': self.rounding, 'isStart': self.isStart ,'gate':self.gate}
+        return {'id': self.id, 'latitude': self.lat, 'longitute': self.lon, 'description': self.descrip, 'rounding': self.rounding, 'isStartLine': self.isStart }
+
+    def gate_json(self):
+        return {'id': self.id, 'gateId': self.gate} 
 
     def input_lat(self):
         self.lat = input_float("Input Latitude: ")
@@ -75,21 +77,49 @@ class Course:
 
     def __init__(self):
         self.input_functions = [self.input_name, self.input_description, self.input_marks]
-        self.id = random.randint(0, 999999999999)
+        self.id = random.randint(0, 9999999)
         self.create_new()
 
-        self.id = requests.post(CONNECTION_STRING + "/Course", self.json_create())
-        print(self.id.json())
+        responce  = requests.post(CONNECTION_STRING + "/course", json = self.json_create())
 
-        print("this course has been created and has id: " + str(self.id))
+        if(responce.json != None and id in responce.json()):
+            self.id = responce.json()['id']
+        if(int(responce.status_code/100) == 2):
+            print("this course has been created and has id: " + str(self.id))
+        elif(int(responce.status_code/100) == 4):
+            print("there was an error in the given values, please use apropriate formats")
+        elif(int(responce.status_code/100) == 5):
+            print("there was a server error, please try again")
 
     # TODO
     def json_create(self):
         marks = []
         for mark in self.marks:
             marks.append(mark.json_create())
-        return {'name': self.name, 'description': self.description, 'marks': marks}
-        
+        return {'id': self.id,'name': self.name, 'description': self.description, 'courseMarks': marks}
+
+    def get():        
+        responce = input("get specific course? Y/N \n")
+
+        if (responce == "y" or responce == "Y"):
+            id = input_int("Input course id: ") 
+            print(yaml.dump( requests.get(CONNECTION_STRING + "/course" + str(id)).json(), default_flow_style=None))
+        else:
+            print(yaml.dump( requests.get(CONNECTION_STRING + "/course").json(), default_flow_style=None))
+
+
+    def link_marks(self):
+        for mark in self.marks:
+            if mark.gate != None:
+                other_mark = None
+                # find other mark
+                for second_mark in self.marks:
+                    if second_mark.id == mark.gate:
+                        other_mark = second_mark
+                        break
+                # make request to update gates
+                requests.put(CONNECTION_STRING + "/course/marks/{mark.id}", json= mark.gate_json()) 
+                requests.put(CONNECTION_STRING + "/course/marks/{other_mark.id}", json= other_mark.gate_json()) 
 
     def create_new(self):
         for function in self.input_functions:
@@ -111,21 +141,32 @@ class Course:
 class Race:
 
     def __init__(self):
-        self.input_functions = []
+        self.input_functions = [self.input_Name, self.input_start_time, self.input_end_time, self.input_course_id,self.input_regatta_id]
+        self.id = random.randint(0, 9999999)
         self.create_new()
         
-        self.id = requests.post(CONNECTION_STRING + "/race", self.json_create()) 
         
-        print("this race has been created and has id: " + str(self.id))
+        responce = requests.post(CONNECTION_STRING + "/race", json = self.json_create()) 
+
+        if(responce.json != None and id in responce.json()):
+            self.id = responce.json()['id']
+        if(int(responce.status_code/100) == 2):
+            print("this race has been created and has id: " + str(self.id))
+        elif(int(responce.status_code/100) == 4):
+            print("there was an error in the given values, please use apropriate formats")
+        elif(int(responce.status_code/100) == 5):
+            print("there was a server error, please try again")
 
     def get():
         responce = input("get specific race? Y/N \n")
 
         if (responce == "y" or responce == "Y"):
             id = input_int("Input race Id: ") 
-            print( requests.get(CONNECTION_STRING + "/race" + str(id)).json())
+            responce = requests.get(CONNECTION_STRING + "/race" + str(id)).json()
         else:
-            print( requests.get(CONNECTION_STRING + "/race").json())
+            responce =  requests.get(CONNECTION_STRING + "/race").json()
+
+        print(yaml.dump(responce, default_flow_style=False))
 
     def get_results():
         id = input_int("Input race Id: ") 
@@ -135,10 +176,8 @@ class Race:
         for function in self.input_functions:
             function()
 
-
-    # TODO
     def json_create(self):
-        print("TODO")
+        return {'id': 0, 'startTime': self.start_time, 'endTime':self.end_time, 'name':self.name, 'participants':[], 'courseId':self.course_id}
 
     def input_Name(self):
         self.name = input("Input name: ")
@@ -165,19 +204,19 @@ class Race:
         if (responce == "y" or responce == "Y"):
             self.course_id = input_int("Input Regatta Id: ")
 
-USER_ACTIONS = [Race, Course, Race.get, Race.get_results]
-USER_OPTIONS = ["Create a race", "Create a course", "Get race data", "Get race results"]
+USER_ACTIONS = [Race, Course, Race.get, Course.get]
+USER_OPTIONS = ["Create a race", "Create a course", "Get race data", "Get course data"]
 
 while True:
     print("actions avalible: ")
     for i in range(len(USER_OPTIONS)):
         print(str(i) + ": " + USER_OPTIONS[i])    
 
-    option = input("Give requested option 1,2,... \n")
+    option = input("Give requested option 0,1,... \n")
     if option.isdigit():
         option = int(option)
 
-        if option > 0 and option < len(USER_ACTIONS):
+        if option >= 0 and option < len(USER_ACTIONS):
             USER_ACTIONS[option]()
 
     
